@@ -1,0 +1,335 @@
+---
+import type { ContactFormBlock } from '@nishki/types'
+import { getSettings } from '../../lib/cms'
+import { pagePath, ui, type Locale } from '../../lib/i18n'
+
+interface Props {
+  block: ContactFormBlock
+  locale: Locale
+}
+const { block, locale } = Astro.props
+const t = ui[locale]
+const f = t.form
+const settings = await getSettings(locale)
+const privacy = typeof settings.privacyPage === 'object' && settings.privacyPage ? pagePath(locale, settings.privacyPage.slug) : null
+const endpoint = import.meta.env.PUBLIC_CONTACT_ENDPOINT || 'http://localhost:3000/contact'
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'
+---
+
+<section class="contact wrap">
+  <div class="panel">
+    {block.intro && <p class="intro">{block.intro}</p>}
+
+    <form
+      id="contact-form"
+      novalidate
+      data-endpoint={endpoint}
+      data-locale={locale}
+      data-errors={JSON.stringify(f.errors)}
+      data-sending={f.sending}
+    >
+      <div class="row">
+        <label>{f.name}<input name="name" type="text" autocomplete="name" required maxlength="100" /></label>
+        <label>{f.email}<input name="email" type="email" autocomplete="email" required maxlength="254" /></label>
+      </div>
+      <div class="row">
+        <label>{f.phone}<input name="phone" type="tel" autocomplete="tel" required pattern="[+\d][\d\s().\-/]{4,39}" maxlength="40" /></label>
+        <label>{f.weddingDate}<input name="weddingDate" type="text" required maxlength="100" /></label>
+      </div>
+      <label>{f.weddingLocation}<input name="weddingLocation" type="text" required maxlength="300" /></label>
+      <label>{f.weddingNotes}<input name="weddingNotes" type="text" required maxlength="2000" /></label>
+
+      <fieldset>
+        <legend>{f.guests}</legend>
+        <div class="pills">
+          {
+            Object.entries(t.guests).map(([value, label]) => (
+              <label class="pill">
+                <input type="radio" name="numberOfGuests" value={value} required />
+                <span>{label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <fieldset data-group="typeOfServices">
+        <legend>{f.services}</legend>
+        <div class="pills">
+          {
+            Object.entries(t.services).map(([value, label]) => (
+              <label class="pill">
+                <input type="checkbox" name="typeOfServices" value={value} />
+                <span>{label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <fieldset data-group="origin">
+        <legend>{f.origin}</legend>
+        <div class="pills">
+          {
+            Object.entries(t.origins).map(([value, label]) => (
+              <label class="pill">
+                <input type="checkbox" name="origin" value={value} />
+                <span>{label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <label class="wide">{f.message}<textarea name="message" rows="6" required maxlength="5000"></textarea></label>
+
+      <!-- Honeypot: hidden from people, filled by bots -->
+      <div class="hp" aria-hidden="true">
+        <label>Website<input name="website" type="text" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <div class="cf-turnstile" data-sitekey={siteKey} data-language={locale} data-theme="light"></div>
+
+      <p class="privacy">
+        {f.privacy}{' '}
+        {privacy ? <a href={privacy}>{f.privacyLink}</a> : f.privacyLink}.
+      </p>
+
+      <button type="submit" class="btn btn--solid submit">{f.submit}</button>
+      <p class="error" role="alert" hidden></p>
+    </form>
+
+    <div class="done" hidden tabindex="-1">
+      <h2>{block.successHeading}</h2>
+      <p>{block.successText}</p>
+      <button type="button" class="btn again">{f.again}</button>
+    </div>
+  </div>
+</section>
+
+<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+  type Turnstile = { reset: (el?: string | Element) => void; getResponse: (el?: string | Element) => string | undefined }
+  const form = document.getElementById('contact-form') as HTMLFormElement | null
+  if (form) {
+    const done = form.parentElement!.querySelector<HTMLElement>('.done')!
+    const error = form.querySelector<HTMLElement>('.error')!
+    const button = form.querySelector<HTMLButtonElement>('.submit')!
+    const widget = form.querySelector<HTMLElement>('.cf-turnstile')!
+    const errors = JSON.parse(form.dataset.errors || '{}') as Record<string, string>
+    const label = button.textContent
+
+    const showError = (code: string) => {
+      error.textContent = errors[code] || errors.server
+      error.hidden = false
+    }
+    const ts = () => (window as unknown as { turnstile?: Turnstile }).turnstile
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      error.hidden = true
+      const data = new FormData(form)
+      const groupsOk = ['typeOfServices', 'origin'].every((g) => data.getAll(g).length > 0)
+      form.querySelectorAll<HTMLFieldSetElement>('fieldset[data-group]').forEach((fs) => {
+        fs.toggleAttribute('data-invalid', data.getAll(fs.dataset.group!).length === 0)
+      })
+      if (!form.checkValidity() || !groupsOk) {
+        form.classList.add('validated')
+        showError('validation')
+        form.querySelector<HTMLElement>(':invalid, fieldset[data-invalid] input')?.focus()
+        return
+      }
+      const token = String(data.get('cf-turnstile-response') || ts()?.getResponse(widget) || '')
+      if (!token) return showError('captcha')
+
+      const body = {
+        name: data.get('name'),
+        email: data.get('email'),
+        phone: data.get('phone'),
+        weddingDate: data.get('weddingDate'),
+        weddingLocation: data.get('weddingLocation'),
+        weddingNotes: data.get('weddingNotes'),
+        message: data.get('message'),
+        numberOfGuests: data.get('numberOfGuests'),
+        typeOfServices: data.getAll('typeOfServices'),
+        origin: data.getAll('origin'),
+        turnstileToken: token,
+        website: data.get('website'),
+        locale: form.dataset.locale,
+      }
+
+      button.disabled = true
+      button.textContent = form.dataset.sending || '…'
+      try {
+        const res = await fetch(form.dataset.endpoint!, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+        if (res.ok && json.ok) {
+          form.hidden = true
+          done.hidden = false
+          done.focus()
+        } else {
+          showError(json.error || 'server')
+          ts()?.reset(widget)
+        }
+      } catch {
+        showError('server')
+        ts()?.reset(widget)
+      } finally {
+        button.disabled = false
+        button.textContent = label
+      }
+    })
+
+    done.querySelector('.again')!.addEventListener('click', () => {
+      form.reset()
+      form.classList.remove('validated')
+      ts()?.reset(widget)
+      done.hidden = true
+      form.hidden = false
+    })
+  }
+</script>
+
+<style>
+  .contact {
+    padding-bottom: var(--section);
+  }
+  .panel {
+    max-width: 800px;
+    margin-inline: auto;
+    padding: clamp(24px, 5vw, 56px);
+    background: var(--card);
+  }
+  .intro {
+    margin: 0 0 28px;
+    text-align: center;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 15px;
+  }
+  .row > label {
+    flex: 1 1 260px;
+  }
+  input[type='text'],
+  input[type='email'],
+  input[type='tel'],
+  textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 1px solid var(--field);
+    border-radius: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: inherit;
+  }
+  textarea {
+    padding: 12px 16px;
+    resize: vertical;
+  }
+  .validated :is(input, textarea):invalid,
+  fieldset[data-invalid] .pill span {
+    border-color: var(--error);
+  }
+  fieldset {
+    border: 0;
+    margin: 8px 0 0;
+    padding: 0;
+  }
+  legend {
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding: 0;
+  }
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .pill {
+    flex: 0 0 auto;
+    position: relative;
+  }
+  .pill input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+  .pill span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 20px;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .pill input:checked + span {
+    background: var(--ink);
+    color: var(--light);
+  }
+  .pill input:focus-visible + span {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .hp {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .privacy {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+  .privacy a {
+    border-bottom: 1px solid currentColor;
+  }
+  .submit {
+    align-self: center;
+    margin-top: 8px;
+  }
+  .submit:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  .error {
+    margin: 0;
+    color: var(--error);
+    text-align: center;
+  }
+  .done {
+    text-align: center;
+    padding: 40px 0;
+  }
+  .done h2 {
+    font-family: var(--serif);
+    font-size: 40px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .done p {
+    margin: 0 0 32px;
+  }
+</style>

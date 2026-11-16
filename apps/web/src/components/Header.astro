@@ -1,0 +1,163 @@
+---
+import type { Navigation, SiteSetting } from '@nishki/types'
+import { href } from '../lib/links'
+import { prefix, ui, type Locale } from '../lib/i18n'
+import Icon from './Icon.astro'
+import LangSwitch from './LangSwitch.astro'
+import Logo from './Logo.astro'
+
+interface Props {
+  nav: Navigation
+  settings: SiteSetting
+  locale: Locale
+  path: string
+  /** Transparent header with light text over a hero photo. */
+  overlay: boolean
+}
+const { nav, settings, locale, path, overlay } = Astro.props
+const t = ui[locale]
+const items = (nav.header?.items ?? [])
+  .map((i) => ({ label: i.link.label, url: href(i.link, locale) }))
+  .filter((i): i is { label: string; url: string } => Boolean(i.label && i.url))
+const cta = nav.header?.cta
+const ctaUrl = href(cta, locale)
+const isActive = (url: string) => (url === prefix(locale) ? path === url : path.startsWith(url))
+---
+
+<header class:list={['site-header', { overlay }]}>
+  <a href={prefix(locale)} class="brand" aria-label={settings.siteName}><Logo settings={settings} /></a>
+
+  <button class="menu-btn" type="button" popovertarget="site-nav" aria-label={t.menu}>
+    <Icon name="menu" />
+  </button>
+
+  <div id="site-nav" popover>
+    <button class="menu-close" type="button" popovertarget="site-nav" popovertargetaction="hide" aria-label={t.close}>
+      <Icon name="close" />
+    </button>
+    <nav class="primary" aria-label={t.menu}>
+      {
+        items.map((i) => (
+          <a href={i.url} aria-current={isActive(i.url) ? 'page' : undefined}>
+            {i.label}
+          </a>
+        ))
+      }
+      {ctaUrl && cta?.label && <a class="cta" href={ctaUrl} aria-current={isActive(ctaUrl) ? 'page' : undefined}>{cta.label}</a>}
+    </nav>
+    <div class="lang-wrap"><LangSwitch locale={locale} path={path} /></div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 32px;
+    padding: 20px var(--gutter);
+    color: var(--ink);
+    position: relative;
+    z-index: 10;
+  }
+  .site-header.overlay {
+    position: absolute;
+    inset: 0 0 auto;
+    color: var(--light);
+  }
+  .brand {
+    display: block;
+    text-align: center;
+  }
+  .primary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 36px;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .primary a {
+    padding: 12px 0;
+    border-bottom: 1px solid transparent;
+  }
+  .primary a[aria-current='page']:not(.cta) {
+    border-bottom-color: currentColor;
+  }
+  .primary .cta {
+    padding: 12px 24px;
+    border: 1px solid currentColor;
+  }
+  .lang-wrap {
+    padding-left: 8px;
+    border-left: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  }
+  .menu-btn,
+  .menu-close {
+    background: none;
+    border: 0;
+    color: inherit;
+    padding: 10px;
+    cursor: pointer;
+  }
+
+  /* Desktop: the popover is just an inline row */
+  @media (min-width: 1000px) {
+    .menu-btn,
+    .menu-close {
+      display: none;
+    }
+    #site-nav {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      position: static;
+      inset: auto;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      background: none;
+      color: inherit;
+    }
+  }
+
+  /* Mobile: full-screen menu (native popover, no JavaScript) */
+  @media (max-width: 999.98px) {
+    #site-nav {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      margin: 0;
+      border: 0;
+      padding: 24px var(--gutter);
+      background: var(--bg);
+      color: var(--ink);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+    }
+    #site-nav:popover-open {
+      display: flex;
+    }
+    .menu-close {
+      position: absolute;
+      top: 24px;
+      right: var(--gutter);
+    }
+    .primary {
+      flex-direction: column;
+      gap: 12px;
+      font-size: 18px;
+    }
+    .lang-wrap {
+      border: 0;
+      padding: 0;
+    }
+  }
+</style>

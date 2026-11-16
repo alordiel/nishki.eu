@@ -1,0 +1,73 @@
+---
+import type { Media } from '@nishki/types'
+import { getImage } from 'astro:assets'
+import Footer from '../components/Footer.astro'
+import Header from '../components/Header.astro'
+import { getNavigation, getSettings, isMedia, mediaSize, mediaSrc } from '../lib/cms'
+import { defaultLocale, htmlLang, locales, ogLocale, switchLocale, ui, type Locale } from '../lib/i18n'
+import '../styles/global.css'
+
+interface Props {
+  locale: Locale
+  /** Path of this page, e.g. "/en/about/" */
+  path: string
+  title?: string | null
+  description?: string | null
+  image?: number | Media | null
+  noindex?: boolean | null
+  /** Header overlays the first section (hero). */
+  overlay?: boolean
+  type?: 'website' | 'article'
+}
+
+const { locale, path, title, description, image, noindex, overlay = false, type = 'website' } = Astro.props
+const [settings, nav] = await Promise.all([getSettings(locale), getNavigation(locale)])
+
+const site = settings.siteName || 'Nishki'
+const fullTitle = title ? (title.includes(site) ? title : `${title} — ${site}`) : settings.defaultSeo?.title || site
+const desc = description || settings.defaultSeo?.description || ''
+const canonical = new URL(path, Astro.site).href
+
+const ogMedia = isMedia(image) ? image : isMedia(settings.defaultSeo?.image) ? settings.defaultSeo.image : null
+let ogImage: string | null = null
+if (ogMedia) {
+  const { width, height } = mediaSize(ogMedia)
+  const img = await getImage({ src: mediaSrc(ogMedia), width: 1200, height: Math.round((1200 / width) * height), format: 'jpeg', quality: 80 })
+  ogImage = new URL(img.src, Astro.site).href
+}
+---
+
+<!doctype html>
+<html lang={htmlLang[locale]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    {desc && <meta name="description" content={desc} />}
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {locales.map((l) => <link rel="alternate" hreflang={l} href={new URL(switchLocale(path, locale, l), Astro.site).href} />)}
+    <link rel="alternate" hreflang="x-default" href={new URL(switchLocale(path, locale, defaultLocale), Astro.site).href} />
+
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={site} />
+    <meta property="og:title" content={fullTitle} />
+    {desc && <meta property="og:description" content={desc} />}
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={ogLocale[locale]} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="theme-color" content="#FFFEFC" />
+  </head>
+  <body id="top">
+    <a class="skip" href="#main">{ui[locale].skip}</a>
+    <Header nav={nav} settings={settings} locale={locale} path={path} overlay={overlay} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer nav={nav} settings={settings} locale={locale} path={path} />
+  </body>
+</html>

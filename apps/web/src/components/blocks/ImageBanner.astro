@@ -1,0 +1,31 @@
+---
+import type { ImageBannerBlock } from '@nishki/types'
+import Img from '../Img.astro'
+interface Props {
+  block: ImageBannerBlock
+  first?: boolean
+}
+const { block, first = false } = Astro.props
+---
+
+<div class:list={['banner', block.height ?? 'natural']}>
+  <Img media={block.image} sizes={block.height === 'natural' ? '100vw' : 'max(100vw, 1100px)'} class="img" priority={first} cover={block.height !== 'natural'} />
+</div>
+
+<style>
+  .banner :global(.img) {
+    width: 100%;
+  }
+  .small :global(.img) {
+    height: clamp(240px, 30vw, 420px);
+    object-fit: cover;
+  }
+  .medium :global(.img) {
+    height: clamp(300px, 52vw, 741px);
+    object-fit: cover;
+  }
+  .large :global(.img) {
+    height: clamp(360px, 60vw, 864px);
+    object-fit: cover;
+  }
+</style>

@@ -1,0 +1,45 @@
+# Alternative publish pipeline (BUILD_MODE=hook): the CMS triggers this workflow via workflow_dispatch:
+#   BUILD_HOOK_URL=https://api.github.com/repos/<owner>/<repo>/actions/workflows/publish-site.yml/dispatches
+#   BUILD_HOOK_HEADERS={"Authorization":"Bearer <fine-grained token with actions:write>","Accept":"application/vnd.github+json"}
+#   BUILD_HOOK_BODY={"ref":"main"}
+# It builds the static site from the CMS, deploys to Cloudflare Pages and reports back to the admin.
+name: Publish site
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @nishki/web...
+      - name: Build
+        run: pnpm --filter @nishki/web build
+        env:
+          CMS_URL: https://api.nishki.eu
+          CMS_API_KEY: ${{ secrets.CMS_API_KEY }}
+          PUBLIC_SITE_URL: https://nishki.eu
+          PUBLIC_CONTACT_ENDPOINT: https://api.nishki.eu/contact
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/web/dist --project-name=nishki --branch=main
+      - name: Report result to the CMS
+        if: always()
+        run: |
+          curl -fsS -X POST https://api.nishki.eu/api/publish/callback \
+            -H "x-build-secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" -H "content-type: application/json" \
+            -d "{\"status\":\"${{ job.status == 'success' && 'success' || 'failure' }}\",\"message\":\"GitHub run ${{ github.run_id }}: ${{ job.status }}\"}"

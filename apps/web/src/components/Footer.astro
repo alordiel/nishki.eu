@@ -1,0 +1,84 @@
+---
+import type { Navigation, SiteSetting } from '@nishki/types'
+import { href } from '../lib/links'
+import { ui, type Locale } from '../lib/i18n'
+import Icon from './Icon.astro'
+import LangSwitch from './LangSwitch.astro'
+import Logo from './Logo.astro'
+
+interface Props {
+  nav: Navigation
+  settings: SiteSetting
+  locale: Locale
+  path: string
+}
+const { nav, settings, locale, path } = Astro.props
+const t = ui[locale]
+const cta = nav.footer?.cta
+const ctaUrl = href(cta, locale)
+const instagram = settings.social?.instagram
+---
+
+<footer class="site-footer">
+  <div class="side">
+    <Logo settings={settings} size="footer" />
+    {
+      instagram && (
+        <a class="round" href={instagram} target="_blank" rel="noopener" aria-label="Instagram">
+          <Icon name="instagram" />
+        </a>
+      )
+    }
+  </div>
+  {ctaUrl && cta?.label && <a class="btn" href={ctaUrl}>{cta.label}</a>}
+  <div class="side end">
+    <a class="round" href="#top" aria-label={t.backToTop}><Icon name="arrow-up" /></a>
+    <LangSwitch locale={locale} path={path} />
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px 32px;
+    padding: 40px var(--gutter);
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .side {
+    flex: 1 1 0;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: var(--ink);
+  }
+  .end {
+    justify-content: flex-end;
+    gap: 24px;
+  }
+  .round {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    color: var(--ink);
+  }
+  @media (max-width: 720px) {
+    .site-footer {
+      flex-direction: column;
+    }
+    .side,
+    .end {
+      justify-content: center;
+      min-width: 0;
+    }
+  }
+</style>

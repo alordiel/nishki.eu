@@ -1,0 +1,29 @@
+---
+interface Props {
+  name: 'instagram' | 'arrow-up' | 'menu' | 'close'
+  size?: number
+}
+const { name, size = 24 } = Astro.props
+---
+
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {
+    name === 'instagram' && (
+      <>
+        <rect x="2" y="2" width="20" height="20" rx="5" />
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+      </>
+    )
+  }
+  {
+    name === 'arrow-up' && (
+      <>
+        <line x1="12" y1="19" x2="12" y2="5" />
+        <polyline points="5 12 12 5 19 12" />
+      </>
+    )
+  }
+  {name === 'menu' && <path d="M3 7h18M3 12h18M3 17h18" />}
+  {name === 'close' && <path d="M6 6l12 12M18 6L6 18" />}
+</svg>

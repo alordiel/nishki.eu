@@ -1,0 +1,18 @@
+---
+import type { SectionHeadingBlock } from '@nishki/types'
+interface Props {
+  block: SectionHeadingBlock
+  first?: boolean
+}
+const { block, first = false } = Astro.props
+const Tag = first ? 'h1' : 'h2'
+---
+
+<div class="sh wrap"><Tag class="caps-title" style={block.tone === 'dark' ? 'color:var(--ink)' : undefined}>{block.text}</Tag></div>
+
+<style>
+  .sh {
+    padding-top: clamp(48px, 6vw, 72px);
+    padding-bottom: clamp(32px, 4vw, 56px);
+  }
+</style>

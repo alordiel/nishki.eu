@@ -1,0 +1,38 @@
+---
+import { locales, switchLocale, ui, type Locale } from '../lib/i18n'
+
+interface Props {
+  locale: Locale
+  path: string
+  order?: readonly Locale[]
+}
+const { locale, path, order = locales } = Astro.props
+---
+
+<nav class="lang" aria-label={ui[locale].changeLanguage}>
+  {
+    order.map((l) => (
+      <a href={switchLocale(path, locale, l)} hreflang={l} lang={l} aria-current={l === locale ? 'true' : undefined}>
+        {l.toUpperCase()}
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  .lang {
+    display: flex;
+    gap: 4px;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+  }
+  .lang a {
+    padding: 12px 8px;
+    border-bottom: 1px solid transparent;
+    opacity: 0.8;
+  }
+  .lang a[aria-current] {
+    border-bottom-color: currentColor;
+    opacity: 1;
+  }
+</style>

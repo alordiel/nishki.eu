@@ -1,0 +1,17 @@
+{
+  "name": "nishki",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:cms": "pnpm --filter @nishki/cms dev",
+    "dev:web": "pnpm --filter @nishki/web dev",
+    "build:cms": "pnpm --filter @nishki/cms build",
+    "build:web": "pnpm --filter @nishki/web build",
+    "seed": "pnpm --filter @nishki/cms seed",
+    "types": "pnpm --filter @nishki/cms generate:types",
+    "check": "pnpm --filter @nishki/cms typecheck && pnpm --filter @nishki/web check"
+  },
+  "engines": {
+    "node": ">=24.22.1"
+  }
+}

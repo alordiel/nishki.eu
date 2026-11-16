@@ -1,0 +1,63 @@
+---
+import type { FaqBlock } from '@nishki/types'
+import { richText } from '../../lib/richtext'
+interface Props {
+  block: FaqBlock
+}
+const { block } = Astro.props
+---
+
+<section class="faq wrap">
+  {block.heading && <h2 class="caps-title">{block.heading}</h2>}
+  {
+    (block.items ?? []).map((item) => (
+      <details>
+        <summary>{item.question}</summary>
+        <div class="prose" set:html={richText(item.answer)} />
+      </details>
+    ))
+  }
+</section>
+
+<style>
+  .faq {
+    max-width: calc(760px + 2 * var(--gutter));
+    padding-bottom: var(--section);
+  }
+  .faq h2 {
+    margin-bottom: 40px;
+  }
+  details {
+    border-top: 1px solid var(--line);
+    padding: 20px 0;
+  }
+  details:last-of-type {
+    border-bottom: 1px solid var(--line);
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 18px;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::after {
+    content: '+';
+    font-family: var(--serif);
+    font-size: 28px;
+    line-height: 0.8;
+    color: var(--accent);
+  }
+  details[open] summary::after {
+    content: '–';
+  }
+  .prose {
+    margin-top: 12px;
+    color: var(--ink-soft);
+  }
+</style>

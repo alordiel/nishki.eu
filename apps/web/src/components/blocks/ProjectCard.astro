@@ -1,0 +1,42 @@
+---
+import type { Project } from '@nishki/types'
+import { projectPath, type Locale } from '../../lib/i18n'
+import Img from '../Img.astro'
+
+interface Props {
+  project: Project
+  locale: Locale
+}
+const { project, locale } = Astro.props
+const meta = [project.location, project.season].filter(Boolean).join(' · ')
+---
+
+<a class="card" href={projectPath(locale, project.slug)}>
+  <Img media={project.cover} sizes="(min-width: 1200px) 290px, (min-width: 640px) 45vw, 92vw" widths={[400, 600, 900]} class="cover" cover />
+  <p class="title">{[project.title, project.venue].filter(Boolean).join(', ')}</p>
+  {meta && <p class="meta">{meta}</p>}
+</a>
+
+<style>
+  .card {
+    display: block;
+  }
+  .card :global(.cover) {
+    width: 100%;
+    height: 480px;
+    object-fit: cover;
+  }
+  .title {
+    margin: 16px 0 0;
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .meta {
+    margin: 0;
+    font-size: 15px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>

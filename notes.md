@@ -1,0 +1,5 @@
+
+- Page 3 - GALLERY - the collage should be similar to Maley’s - https://en.maley-photo.com/ - large photos, narrow spaces between them, a balance between horizontal and vertical shots.
+- HOME PAGE - “FAVOURITE PROJECTS” - clicking on each photo takes you to a separate page/gallery, where there will also be a collage of photos, but with the option to freely add text in between. For example, three rows of photos – a text box… With the option to have several of these, or none at all. It’s important for us to be flexible, because different projects require a different approach. Sometimes there’s more to tell, sometimes there isn’t.
+- GALLERY – each project there links to a separate page/gallery containing all the photos. We’re aiming for around 50 images per project, an equal number of vertical and horizontal ones, but again – with the option to be flexible. Some projects have more horizontal ones, others more vertical ones.
+In ‘Favourite Projects’ and on page 3 – Gallery – the photos are clickable; this opens the entire projects. And below the projects on page 3, we again have a collage of photos which are static, again similar to Maley’s style.

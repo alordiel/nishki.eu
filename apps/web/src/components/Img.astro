@@ -1,0 +1,41 @@
+---
+/** Optimised <img> (WebP, srcset) for a Payload media document. Downloaded and processed at build time. */
+import type { Media } from '@nishki/types'
+import { Image } from 'astro:assets'
+import { isMedia, mediaSize, mediaSrc } from '../lib/cms'
+
+interface Props {
+  media: number | Media | null | undefined
+  sizes: string
+  class?: string
+  priority?: boolean
+  widths?: number[]
+  /** For object-fit: cover images: use the focal point set in the CMS. */
+  cover?: boolean
+}
+
+const { media, sizes, class: className, priority = false, widths = [480, 800, 1200, 1600, 2400], cover = false } = Astro.props
+const m = isMedia(media) ? media : null
+const size = m ? mediaSize(m) : null
+const usable = size ? widths.filter((w) => w <= size.width) : []
+if (size && !usable.includes(size.width) && size.width < Math.max(...widths)) usable.push(size.width)
+const position = cover && m ? `${m.focalX ?? 50}% ${m.focalY ?? 50}%` : undefined
+---
+
+{
+  m && size && (
+    <Image
+      src={mediaSrc(m)}
+      width={size.width}
+      height={size.height}
+      widths={usable}
+      sizes={sizes}
+      alt={m.alt ?? ''}
+      format="webp"
+      quality={80}
+      class={className}
+      style={position ? `object-position:${position}` : undefined}
+      priority={priority}
+    />
+  )
+}

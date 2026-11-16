@@ -1,0 +1,11 @@
+{
+  "name": "@nishki/types",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TypeScript types generated from the Payload config (pnpm types).",
+  "types": "./src/payload-types.ts",
+  "exports": {
+    ".": "./src/payload-types.ts"
+  }
+}

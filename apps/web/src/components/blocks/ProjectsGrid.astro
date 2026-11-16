@@ -1,0 +1,97 @@
+---
+import type { ProjectsGridBlock } from '@nishki/types'
+import { getProjects, isProject } from '../../lib/cms'
+import { projectPath, type Locale } from '../../lib/i18n'
+import Img from '../Img.astro'
+
+interface Props {
+  block: ProjectsGridBlock
+  locale: Locale
+}
+const { block, locale } = Astro.props
+const projects =
+  block.source === 'selected'
+    ? (block.projects ?? []).filter(isProject).filter((p) => p._status !== 'draft')
+    : await getProjects(locale)
+---
+
+<section class="pgrid wrap">
+  {
+    projects.map((p, i) => (
+      <a class:list={['row', { rev: i % 2 === 1 }]} href={projectPath(locale, p.slug)}>
+        <Img media={p.cover} sizes="(min-width: 1100px) 545px, (min-width: 1000px) 46vw, 92vw" widths={[480, 800, 1100]} class="photo" cover />
+        <div class="card">
+          {(p.location || p.season) && <p class="meta">{[p.location, p.season].filter(Boolean).join(' · ')}</p>}
+          <h2>{[p.title, p.venue].filter(Boolean).join(', ')}</h2>
+          {p.excerpt && <p>{p.excerpt}</p>}
+        </div>
+      </a>
+    ))
+  }
+</section>
+
+<style>
+  .pgrid {
+    display: grid;
+    gap: 24px;
+    padding-block: 56px var(--section);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .row :global(.photo),
+  .card {
+    width: 100%;
+    height: 460px;
+  }
+  .row :global(.photo) {
+    object-fit: cover;
+  }
+  .card {
+    background: var(--card);
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .rev .card {
+    order: -1;
+  }
+  .meta {
+    margin: 0 0 12px;
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h2 {
+    margin: 0 0 16px;
+    font-family: var(--serif);
+    font-size: 36px;
+    line-height: 1.1;
+  }
+  .card p:last-child {
+    margin: 0;
+  }
+  @media (max-width: 999.98px) {
+    .row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .rev .card {
+      order: 0;
+    }
+    .row :global(.photo) {
+      height: auto;
+      aspect-ratio: 3 / 2;
+    }
+    .card {
+      height: auto;
+      padding: 32px 24px;
+    }
+  }
+</style>

@@ -1,0 +1,73 @@
+---
+/** Maps each Payload block type to its Astro component. */
+import type { Page, Project } from '@nishki/types'
+import type { Locale } from '../lib/i18n'
+import Collage from './blocks/Collage.astro'
+import ContactForm from './blocks/ContactForm.astro'
+import Cta from './blocks/Cta.astro'
+import Faq from './blocks/Faq.astro'
+import FeaturedProjects from './blocks/FeaturedProjects.astro'
+import Hero from './blocks/Hero.astro'
+import ImageBanner from './blocks/ImageBanner.astro'
+import Instagram from './blocks/Instagram.astro'
+import Lead from './blocks/Lead.astro'
+import ProjectsGrid from './blocks/ProjectsGrid.astro'
+import RichText from './blocks/RichText.astro'
+import SectionHeading from './blocks/SectionHeading.astro'
+import Tagline from './blocks/Tagline.astro'
+import Team from './blocks/Team.astro'
+import Testimonial from './blocks/Testimonial.astro'
+import Tiles from './blocks/Tiles.astro'
+
+type Block = NonNullable<Page['layout'] | Project['layout']>[number]
+
+interface Props {
+  blocks: Block[] | null | undefined
+  locale: Locale
+}
+const { blocks = [], locale } = Astro.props
+// The first heading-ish block becomes the page's <h1>.
+const firstHeading = (blocks ?? []).findIndex((b) => b.blockType === 'sectionHeading' || b.blockType === 'hero')
+---
+
+{
+  (blocks ?? []).map((block, i) => {
+    const first = i === 0
+    switch (block.blockType) {
+      case 'hero':
+        return <Hero block={block} first={first} />
+      case 'tagline':
+        return <Tagline block={block} />
+      case 'sectionHeading':
+        return <SectionHeading block={block} first={i === firstHeading} />
+      case 'team':
+        return <Team block={block} locale={locale} />
+      case 'imageBanner':
+        return <ImageBanner block={block} first={first} />
+      case 'featuredProjects':
+        return <FeaturedProjects block={block} locale={locale} />
+      case 'projectsGrid':
+        return <ProjectsGrid block={block} locale={locale} />
+      case 'testimonial':
+        return <Testimonial block={block} locale={locale} />
+      case 'instagram':
+        return <Instagram block={block} locale={locale} />
+      case 'tiles':
+        return <Tiles block={block} />
+      case 'lead':
+        return <Lead block={block} />
+      case 'richText':
+        return <RichText block={block} locale={locale} />
+      case 'faq':
+        return <Faq block={block} />
+      case 'collage':
+        return <Collage block={block} />
+      case 'contactForm':
+        return <ContactForm block={block} locale={locale} />
+      case 'cta':
+        return <Cta block={block} locale={locale} />
+      default:
+        return null
+    }
+  })
+}

@@ -1,0 +1,21 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+
+# cms
+apps/cms/.next/
+apps/cms/next-env.d.ts
+apps/cms/*.tsbuildinfo
+apps/cms/data/
+apps/cms/media/
+
+# web
+apps/web/dist/
+apps/web/.astro/
+
+# original design bundles (large; keep outside git or use LFS)
+/HTML/
+/Pics/

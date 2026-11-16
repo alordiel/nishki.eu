@@ -1,0 +1,94 @@
+---
+import type { HeroBlock } from '@nishki/types'
+import Img from '../Img.astro'
+
+interface Props {
+  block: HeroBlock
+  first?: boolean
+}
+const { block, first = false } = Astro.props
+// The photo is cropped to cover the box; on portrait screens it needs to be wider than the viewport.
+const sizes = block.height === 'medium' ? 'max(100vw, 840px)' : 'max(100vw, 160vh)'
+const lines = (block.heading ?? '').split('\n').filter(Boolean)
+---
+
+<section class:list={['hero', block.height ?? 'full', `align-${block.align ?? 'right'}`]}>
+  <Img media={block.image} sizes={sizes} class="bg" priority={first} cover />
+  <div class="shade" aria-hidden="true"></div>
+  {
+    lines.length > 0 && (
+      <h1 class="heading">
+        {lines.map((l, i) => (
+          <>
+            {i > 0 && <br />}
+            {l}
+          </>
+        ))}
+      </h1>
+    )
+  }
+  {block.caption && <p class="caption">{block.caption}</p>}
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 140px var(--gutter) clamp(32px, 5vw, 64px);
+    overflow: hidden;
+    color: var(--light);
+    background: #3a3430;
+  }
+  .full {
+    min-height: min(100svh, 1080px);
+    min-height: clamp(560px, 100svh, 1080px);
+  }
+  .medium {
+    min-height: clamp(380px, 45vw, 550px);
+  }
+  .hero :global(.bg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(20, 16, 13, 0.45) 0%, rgba(20, 16, 13, 0.08) 30%, rgba(20, 16, 13, 0.12) 60%, rgba(20, 16, 13, 0.35) 100%);
+  }
+  .heading,
+  .caption {
+    position: relative;
+  }
+  .heading {
+    font-family: var(--serif);
+    font-size: clamp(44px, 7vw, 92px);
+    line-height: 1.02;
+    color: var(--gold);
+    max-width: 760px;
+    margin-bottom: clamp(24px, 8vw, 120px);
+  }
+  .align-right {
+    align-items: flex-end;
+    text-align: right;
+  }
+  .align-center {
+    align-items: center;
+    text-align: center;
+  }
+  .align-left {
+    align-items: flex-start;
+  }
+  .caption {
+    font-family: var(--serif);
+    font-size: clamp(32px, 4vw, 56px);
+    line-height: 1;
+    margin: 0;
+    align-self: flex-start;
+    padding-left: clamp(0px, 13vw, 190px);
+  }
+</style>

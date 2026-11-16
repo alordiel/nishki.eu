@@ -1,0 +1,36 @@
+---
+import type { TaglineBlock } from '@nishki/types'
+interface Props {
+  block: TaglineBlock
+}
+const { block } = Astro.props
+---
+
+<section class="tagline wrap">
+  <h2>{block.heading}</h2>
+  {block.subheading && <p>{block.subheading}</p>}
+</section>
+
+<style>
+  .tagline {
+    padding-block: clamp(56px, 7vw, 96px) 0;
+    text-align: center;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(30px, 3.6vw, 50px);
+    line-height: 1.2;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #2c2c2c;
+  }
+  p {
+    max-width: 900px;
+    margin: 10px auto 0;
+    font-size: clamp(18px, 2.4vw, 32px);
+    line-height: 1.3;
+    text-transform: uppercase;
+    color: var(--rust);
+  }
+</style>

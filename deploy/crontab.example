@@ -1,0 +1,4 @@
+# crontab -e  (as the user that runs the CMS)
+# Daily backup at 03:15, retention clean-up at 03:45
+15 3 * * * /srv/nishki/deploy/backup.sh >> /var/log/nishki/backup.log 2>&1
+45 3 * * * cd /srv/nishki && pnpm --filter @nishki/cms retention >> /var/log/nishki/retention.log 2>&1

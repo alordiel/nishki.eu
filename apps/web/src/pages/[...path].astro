@@ -1,0 +1,97 @@
+---
+/**
+ * Every CMS page and project in every locale:
+ *   /            /about/          /gallery/<project>/
+ *   /en/         /en/about/       /en/gallery/<project>/
+ */
+import type { GetStaticPaths } from 'astro'
+import type { Page, Project } from '@nishki/types'
+import BlockRenderer from '../components/BlockRenderer.astro'
+import Hero from '../components/blocks/Hero.astro'
+import Base from '../layouts/Base.astro'
+import { getPages, getProjects } from '../lib/cms'
+import { locales, pagePath, projectPath, toParam, type Locale } from '../lib/i18n'
+
+type Props = { locale: Locale; page?: Page; project?: Project }
+
+export const getStaticPaths = (async () => {
+  const paths = []
+  for (const locale of locales) {
+    const [pages, projects] = await Promise.all([getPages(locale), getProjects(locale)])
+    for (const page of pages) {
+      paths.push({ params: { path: toParam(pagePath(locale, page.slug)) }, props: { locale, page } })
+    }
+    for (const project of projects) {
+      paths.push({ params: { path: toParam(projectPath(locale, project.slug)) }, props: { locale, project } })
+    }
+  }
+  return paths
+}) satisfies GetStaticPaths
+
+const { locale, page, project } = Astro.props as Props
+const path = page ? pagePath(locale, page.slug) : projectPath(locale, project!.slug)
+const projectTitle = project ? [project.title, project.venue].filter(Boolean).join(', ') : ''
+---
+
+{
+  page && (
+    <Base
+      locale={locale}
+      path={path}
+      title={page.seo?.title || (page.slug === 'home' ? null : page.title)}
+      description={page.seo?.description}
+      image={page.seo?.image}
+      noindex={page.seo?.noindex}
+      overlay={page.layout?.[0]?.blockType === 'hero'}
+    >
+      {page.slug === 'home' && <h1 class="visually-hidden">{page.seo?.title || page.title}</h1>}
+      <BlockRenderer blocks={page.layout} locale={locale} />
+    </Base>
+  )
+}
+{
+  project && (
+    <Base
+      locale={locale}
+      path={path}
+      title={project.seo?.title || projectTitle}
+      description={project.seo?.description || project.excerpt}
+      image={project.seo?.image || project.cover}
+      noindex={project.seo?.noindex}
+      overlay
+      type="article"
+    >
+      <Hero block={{ blockType: 'hero', image: project.cover, caption: projectTitle, height: 'medium', align: 'left' }} first />
+      {project.excerpt && (
+        <section class="intro">
+          <p>{project.excerpt}</p>
+          {(project.location || project.season) && <p class="meta">{[project.location, project.season].filter(Boolean).join(' · ')}</p>}
+        </section>
+      )}
+      <BlockRenderer blocks={project.layout} locale={locale} />
+    </Base>
+  )
+}
+
+<style>
+  .intro {
+    max-width: calc(760px + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: clamp(48px, 7vw, 112px) var(--gutter) clamp(32px, 4vw, 56px);
+    text-align: center;
+  }
+  .intro p {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.4;
+  }
+  .intro .meta {
+    margin-top: 16px;
+    font-family: var(--sans);
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+</style>

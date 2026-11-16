@@ -1,0 +1,45 @@
+---
+import type { RichTextBlock } from '@nishki/types'
+import { href } from '../../lib/links'
+import { richText } from '../../lib/richtext'
+import type { Locale } from '../../lib/i18n'
+interface Props {
+  block: RichTextBlock
+  locale: Locale
+}
+const { block, locale } = Astro.props
+const url = href(block.button, locale)
+---
+
+<section class="rt wrap">
+  {block.heading && <h2>{block.heading}</h2>}
+  {block.content && <div class="prose" set:html={richText(block.content)} />}
+  {url && block.button?.label && <p class="action"><a class="btn btn--solid btn--lg" href={url}>{block.button.label}</a></p>}
+</section>
+
+<style>
+  .rt {
+    max-width: calc(760px + 2 * var(--gutter));
+    text-align: center;
+    padding-bottom: clamp(48px, 6vw, 72px);
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 3vw, 40px);
+    margin-bottom: 24px;
+  }
+  .prose {
+    font-size: clamp(17px, 1.6vw, 20px);
+  }
+  .prose :global(p + p) {
+    margin-top: 1.2em;
+  }
+  .action {
+    margin: 48px 0 0;
+  }
+  .btn--lg {
+    min-height: clamp(64px, 7vw, 104px);
+    padding-inline: clamp(32px, 6vw, 80px);
+    font-size: clamp(17px, 2vw, 30px);
+  }
+</style>

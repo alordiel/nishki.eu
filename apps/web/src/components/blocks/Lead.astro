@@ -1,0 +1,29 @@
+---
+import type { LeadBlock } from '@nishki/types'
+import { richText } from '../../lib/richtext'
+interface Props {
+  block: LeadBlock
+}
+const { block } = Astro.props
+---
+
+<section class="lead wrap">
+  <div class="prose" set:html={richText(block.content)} />
+</section>
+
+<style>
+  .lead {
+    padding-block: clamp(48px, 6vw, 72px);
+  }
+  .prose {
+    max-width: 760px;
+    margin-inline: auto;
+    font-family: var(--serif);
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.4;
+    text-align: center;
+  }
+  .prose :global(p + p) {
+    margin-top: 1.4em;
+  }
+</style>
