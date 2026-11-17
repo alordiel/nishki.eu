@@ -1,4 +1,4 @@
-# Editor guide — admin.nishki.eu
+# Editor guide — redaktor.nishki.eu
 
 **Nothing changes on the live site until you click _Publish site_** (top right). Publishing takes 1–3 minutes; the text next to the button shows when the site was last updated. Clicking again while it runs is fine — your latest changes will be included.
 

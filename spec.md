@@ -9,7 +9,7 @@ A static marketing website with a separate admin for content editing, plus a sma
 | Subdomain | Purpose | Tech |
 |---|---|---|
 | `nishki.eu` (+ `www`) | Public static site | Astro (static output) |
-| `admin.nishki.eu` | Content editing, submissions inbox, publish | Payload CMS |
+| `redaktor.nishki.eu` | Content editing, submissions inbox, publish | Payload CMS |
 | `api.nishki.eu` | Content API (build time) + contact form endpoint | Payload CMS (same app) |
 
 ### Core stack
@@ -22,11 +22,11 @@ A static marketing website with a separate admin for content editing, plus a sma
 - **DNS / TLS:** Cloudflare DNS, Let's Encrypt (or Cloudflare proxy)
 
 ### Architecture flow
-1. Editor edits content at `admin.nishki.eu`.
+1. Editor edits content at `redaktor.nishki.eu`.
 2. Editor clicks **Publish** → Payload triggers a build.
 3. Build pulls content from `api.nishki.eu`, runs `astro build`, deploys static files to `nishki.eu`.
 4. Visitor submits contact form → `POST api.nishki.eu/contact` → Turnstile verified → saved to DB → email sent to owner.
-5. Owner reviews submissions in `admin.nishki.eu`.
+5. Owner reviews submissions in `redaktor.nishki.eu`.
 
 ---
 
@@ -34,7 +34,7 @@ A static marketing website with a separate admin for content editing, plus a sma
 
 - Register DNS records: `nishki.eu`, `www`, `admin`, `api`.
 - Provision VPS site entries (Plesk) for `admin` and `api`; Node.js runtime (LTS) with PM2 or systemd.
-- Nginx reverse proxy: `admin.nishki.eu` and `api.nishki.eu` → Payload process (same port, host-based routing).
+- Nginx reverse proxy: `redaktor.nishki.eu` and `api.nishki.eu` → Payload process (same port, host-based routing).
 - TLS certificates for all subdomains.
 - Git repository (monorepo):
   ```
@@ -44,7 +44,7 @@ A static marketing website with a separate admin for content editing, plus a sma
   ```
 - Environment variables: `DATABASE_URI`, `PAYLOAD_SECRET`, `TURNSTILE_SECRET`, `EMAIL_*`, `BUILD_HOOK_URL`, `OWNER_EMAIL`.
 
-**Done when:** all subdomains resolve over HTTPS; Payload "hello" admin loads at `admin.nishki.eu`.
+**Done when:** all subdomains resolve over HTTPS; Payload "hello" admin loads at `redaktor.nishki.eu`.
 
 ---
 
@@ -141,7 +141,7 @@ Email failure must not lose the submission (record saved first; failure logged).
   - Local script on VPS: `astro build` → `rsync` to web root (atomic swap via symlink).
 - Debounce / lock: ignore new publish requests while a build is running; queue one follow-up.
 - Build status shown in admin (last build time, success/failure).
-- Optional: draft preview route on `admin.nishki.eu` using Payload live preview.
+- Optional: draft preview route on `redaktor.nishki.eu` using Payload live preview.
 
 **Done when:** editor changes content, clicks Publish, and the live site updates within a few minutes without developer involvement.
 
@@ -149,7 +149,7 @@ Email failure must not lose the submission (record saved first; failure logged).
 
 ## Phase 6 — Security, backups, monitoring
 
-- Admin: strong passwords, optional 2FA, login rate limiting; consider restricting `admin.nishki.eu` with Cloudflare Access.
+- Admin: strong passwords, optional 2FA, login rate limiting; consider restricting `redaktor.nishki.eu` with Cloudflare Access.
 - Security headers on all subdomains (CSP, HSTS, X-Frame-Options, Referrer-Policy).
 - Daily DB backup (SQLite file / `pg_dump`) + media uploads, retained 30 days, stored off-server.
 - Uptime monitoring for `nishki.eu` and `api.nishki.eu/health`.

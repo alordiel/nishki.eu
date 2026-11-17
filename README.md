@@ -4,7 +4,7 @@ Static marketing site (Astro) + Payload CMS (admin, content API, contact form AP
 
 ```
 apps/web         Astro static site            → nishki.eu
-apps/cms         Payload CMS (Next.js)        → admin.nishki.eu, api.nishki.eu
+apps/cms         Payload CMS (Next.js)        → redaktor.nishki.eu, api.nishki.eu
 packages/types   TS types generated from the Payload config (pnpm types)
 deploy/          build/deploy, backup/restore, Nginx, PM2, cron
 .github/         optional GitHub Actions → Cloudflare Pages publish pipeline
@@ -47,16 +47,16 @@ Every page is a list of blocks; each Payload block (`apps/cms/src/blocks`) has o
 
 ## Server setup (Phase 1)
 
-1. **DNS (Cloudflare):** `nishki.eu`, `www`, `admin`, `api` → VPS IP (or `nishki.eu`/`www` → Cloudflare Pages).
-2. **Plesk:** subdomains `admin` and `api`; Let's Encrypt certificates for all four names. Node 24.22+ via nvm/Plesk Node extension; `npm i -g pnpm pm2`.
+1. **DNS (Cloudflare):** `nishki.eu`, `www`, `redaktor`, `api` → VPS IP (or `nishki.eu`/`www` → Cloudflare Pages).
+2. **Plesk:** subdomains `redaktor` and `api` (done); Let's Encrypt certificates for all four names. Node 24.22+ via nvm/Plesk Node extension; `npm i -g pnpm pm2`.
 3. **Code:** clone to e.g. `/srv/nishki`, `pnpm install --frozen-lockfile`, create `apps/cms/.env` and `apps/web/.env` from `.env.example` (`openssl rand -hex 32` for `PAYLOAD_SECRET`).
 4. **CMS:** `pnpm build:cms && pm2 start deploy/ecosystem.config.cjs && pm2 save && pm2 startup`.
-5. **Nginx:** `deploy/nginx/admin-api.nishki.eu.conf` (+ `cloudflare-realip.conf` in `http {}` if proxied by Cloudflare); `deploy/nginx/nishki.eu.conf` when the static site is served from the VPS.
-6. **First login:** open `https://admin.nishki.eu` → create the first user (always becomes admin), or run the seed with `SEED_ADMIN_*`.
+5. **Nginx:** `deploy/nginx/redaktor-api.nishki.eu.conf` (+ `cloudflare-realip.conf` in `http {}` if proxied by Cloudflare); `deploy/nginx/nishki.eu.conf` when the static site is served from the VPS.
+6. **First login:** open `https://redaktor.nishki.eu` → create the first user (always becomes admin), or run the seed with `SEED_ADMIN_*`.
 7. **Build key:** Users → create user with role *Build*, tick *Enable API key*, copy the key into `apps/web/.env` as `CMS_API_KEY` (the seed does this for you).
 8. **Cron:** `deploy/crontab.example` (daily backup + GDPR retention).
 
-Done when `https://admin.nishki.eu` shows the admin and `https://api.nishki.eu/health` returns `{"ok":true}`.
+Done when `https://redaktor.nishki.eu` shows the admin and `https://api.nishki.eu/health` returns `{"ok":true}`.
 
 ## Publishing (Phase 5)
 
@@ -74,5 +74,5 @@ Editors click **Publish site** in the admin header. Only one build runs at a tim
 - **Backups:** `deploy/backup.sh` (SQLite online backup + media, 30 days, `rclone` to `BACKUP_REMOTE`). **Test restore:** `deploy/restore.sh db-….tar.gz media-….tar.gz` restores into a temporary directory and checks integrity.
 - **Monitoring:** point an uptime monitor (UptimeRobot/Better Stack) at `https://nishki.eu/` and `https://api.nishki.eu/health`.
 - **Logs:** `pm2 logs nishki-cms` (`/var/log/nishki/`). Sentry can be added later.
-- **Admin hardening:** account lock after 5 failed logins (15 min) + Nginx login rate limit; recommended: Cloudflare Access in front of `admin.nishki.eu` (gives 2FA/SSO without code changes).
+- **Admin hardening:** account lock after 5 failed logins (15 min) + Nginx login rate limit; recommended: Cloudflare Access in front of `redaktor.nishki.eu` (gives 2FA/SSO without code changes).
 - **GDPR:** privacy notice + link under the form; submissions auto-deleted after `SUBMISSION_RETENTION_MONTHS` (cron); delete on request from the admin (Submissions → select → Delete; admins only). Export on request: copy the entry from the admin, or `GET /api/submissions?where[email][equals]=…` with an admin token (a CSV export button would need `@payloadcms/plugin-import-export`).

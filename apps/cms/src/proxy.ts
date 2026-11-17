@@ -2,14 +2,24 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 /**
  * Host-based routing for the single Payload process:
- *   admin.nishki.eu  → admin UI (+ /api used by the admin)
- *   api.nishki.eu    → /api (build), /contact, /health — no admin UI
+ *   redaktor.nishki.eu (ADMIN_URL) → admin UI (+ /api used by the admin)
+ *   api.nishki.eu      (SERVER_URL) → /api (build), /contact, /health — no admin UI
  */
+const hostOf = (url?: string) => {
+  try {
+    return url ? new URL(url).hostname : ''
+  } catch {
+    return ''
+  }
+}
+
+const ADMIN_HOST = hostOf(process.env.ADMIN_URL)
+
 export function proxy(req: NextRequest) {
   const host = (req.headers.get('host') || '').split(':')[0]
   const { pathname } = req.nextUrl
 
-  if (host.startsWith('admin.') && pathname === '/') {
+  if (ADMIN_HOST && host === ADMIN_HOST && pathname === '/') {
     return NextResponse.redirect(new URL('/admin', req.url))
   }
   if (host.startsWith('api.')) {
