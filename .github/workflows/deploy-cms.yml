@@ -1,0 +1,64 @@
+# Deploys code changes to the Plesk server on every push to main.
+# SSHes in, updates the checkout and runs deploy/deploy-cms.sh, which rebuilds the CMS only if
+# apps/cms changed and republishes the static site only if apps/web changed.
+#
+# Repository → Settings → Secrets and variables → Actions:
+#   secrets: DEPLOY_SSH_KEY      private key whose .pub is in the subscription user's ~/.ssh/authorized_keys
+#            DEPLOY_KNOWN_HOSTS  output of: ssh-keyscan -p <port> <host>
+#   vars:    DEPLOY_HOST         server hostname or IP
+#            DEPLOY_USER         Plesk subscription system user
+#            DEPLOY_PORT         SSH port (usually 22)
+#            DEPLOY_PATH         checkout on the server, e.g. /var/www/vhosts/nishki.eu/nishki
+name: Deploy CMS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'deploy/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Rebuild everything (CMS + site), even if unchanged'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-cms
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          APP: ${{ vars.DEPLOY_PATH }}
+          FULL: ${{ inputs.full && '1' || '' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$PORT" "$USER@$HOST" bash -s -- "$APP" "$FULL" <<'EOF'
+          set -euo pipefail
+          cd "$1"
+          before="$(git rev-parse HEAD)"
+          git fetch --quiet origin main
+          git reset --hard origin/main
+          if [ -n "$2" ]; then bash deploy/deploy-cms.sh; else bash deploy/deploy-cms.sh "$before"; fi
+          EOF
