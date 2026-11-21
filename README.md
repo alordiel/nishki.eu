@@ -32,7 +32,7 @@ pnpm build:web && pnpm --filter @nishki/web preview   # http://localhost:4321
 
 For local form testing add `CORS_ORIGINS=http://localhost:4321` and `TURNSTILE_SECRET=1x0000000000000000000000000000000AA` to `apps/cms/.env`.
 
-After changing collections/blocks: `pnpm types` (regenerates `packages/types`) and `pnpm --filter @nishki/cms generate:importmap` if admin components changed.
+After changing collections/blocks/fields: `pnpm --filter @nishki/cms payload migrate:create <name>` and commit the new file in `apps/cms/src/migrations` (production applies pending migrations on startup and never auto-creates tables), `pnpm types` (regenerates `packages/types`) and `pnpm --filter @nishki/cms generate:importmap` if admin components changed.
 
 ## Pages and URLs
 

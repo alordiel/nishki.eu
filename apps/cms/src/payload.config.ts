@@ -7,6 +7,7 @@ import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
 import { Media } from './collections/Media'
+import { migrations } from './migrations'
 import { Pages } from './collections/Pages'
 import { Projects } from './collections/Projects'
 import { Submissions } from './collections/Submissions'
@@ -65,6 +66,9 @@ export default buildConfig({
   },
   db: sqliteAdapter({
     client: { url: process.env.DATABASE_URI || 'file:./data/nishki.db' },
+    // Production never auto-creates tables ("push" is dev-only): pending migrations run on startup instead.
+    // After changing collections/blocks/fields: `pnpm --filter @nishki/cms payload migrate:create <name>` and commit it.
+    prodMigrations: migrations,
   }),
   email,
   sharp,
