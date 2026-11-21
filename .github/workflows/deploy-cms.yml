@@ -43,7 +43,7 @@ jobs:
     env:
       APP_DIR: ${{ vars.DEPLOY_PATH }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Build at the server's path so any absolute paths in .next/ match where it runs.
       - name: Copy checkout to the server's path
@@ -55,7 +55,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 12.21.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24.22.3
           cache: pnpm
@@ -101,7 +101,8 @@ jobs:
           DUSER: ${{ vars.DEPLOY_USER }}
           PORT: ${{ vars.DEPLOY_PORT || '22' }}
           SHA: ${{ github.sha }}
-          FULL: ${{ inputs.full && '1' || '' }}
+          # Always a non-empty value: ssh drops empty arguments when it builds the remote command.
+          FULL: ${{ inputs.full && '1' || '0' }}
         run: |
           ssh -i ~/.ssh/deploy_key -p "$PORT" "$DUSER@$HOST" bash -s -- "$APP_DIR" "$SHA" "$FULL" <<'EOF'
           set -euo pipefail
@@ -109,5 +110,5 @@ jobs:
           before="$(git rev-parse HEAD)"
           git fetch --quiet origin main
           git reset --hard "$2"
-          if [ -n "$3" ]; then bash deploy/deploy-cms.sh; else bash deploy/deploy-cms.sh "$before"; fi
+          if [ "${3:-0}" = 1 ]; then bash deploy/deploy-cms.sh; else bash deploy/deploy-cms.sh "$before"; fi
           EOF
