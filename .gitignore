@@ -7,6 +7,8 @@ node_modules/
 
 # cms
 apps/cms/.next/
+apps/cms/.next-new/
+apps/cms/.next-old/
 apps/cms/next-env.d.ts
 apps/cms/*.tsbuildinfo
 apps/cms/data/

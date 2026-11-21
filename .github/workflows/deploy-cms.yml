@@ -1,6 +1,9 @@
 # Deploys code changes to the Plesk server on every push to main.
-# SSHes in, updates the checkout and runs deploy/deploy-cms.sh, which rebuilds the CMS only if
-# apps/cms changed and republishes the static site only if apps/web changed.
+#
+# The CMS is built HERE (GitHub's runner), not on the server: a Payload/Next build needs 2–3 GB of RAM,
+# which can freeze a small shared server. It is built at the same absolute path it runs from on the
+# server, the finished .next/ is uploaded as .next-new/, and deploy/deploy-cms.sh on the server swaps
+# it in, reloads PM2 (rolling back if /health fails) and republishes the static site if apps/web changed.
 #
 # Repository → Settings → Secrets and variables → Actions:
 #   secrets: DEPLOY_SSH_KEY      private key whose .pub is in the subscription user's ~/.ssh/authorized_keys
@@ -21,10 +24,11 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - '.github/workflows/deploy-cms.yml'
   workflow_dispatch:
     inputs:
       full:
-        description: 'Rebuild everything (CMS + site), even if unchanged'
+        description: 'Also rebuild the static site, even if apps/web is unchanged'
         type: boolean
         default: false
 
@@ -35,8 +39,44 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
+    env:
+      APP_DIR: ${{ vars.DEPLOY_PATH }}
     steps:
+      - uses: actions/checkout@v4
+
+      # Build at the server's path so any absolute paths in .next/ match where it runs.
+      - name: Copy checkout to the server's path
+        run: |
+          sudo mkdir -p "$(dirname "$APP_DIR")"
+          sudo chown "$(id -u):$(id -g)" "$(dirname "$APP_DIR")"
+          cp -a "$GITHUB_WORKSPACE" "$APP_DIR"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.21.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.3
+          cache: pnpm
+
+      - name: Install
+        working-directory: ${{ vars.DEPLOY_PATH }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CMS
+        working-directory: ${{ vars.DEPLOY_PATH }}
+        env:
+          # Build-time placeholders only; the server's apps/cms/.env is used at runtime.
+          DATABASE_URI: file:./data/ci-build.db
+          PAYLOAD_SECRET: ci-build-placeholder
+          SERVER_URL: https://api.nishki.eu
+          ADMIN_URL: https://redaktor.nishki.eu
+          SITE_URL: https://nishki.eu
+        run: |
+          mkdir -p apps/cms/data
+          pnpm build:cms
+
       - name: Configure SSH
         env:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -46,19 +86,28 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
 
-      - name: Deploy
+      - name: Upload build
         env:
           HOST: ${{ vars.DEPLOY_HOST }}
-          USER: ${{ vars.DEPLOY_USER }}
+          DUSER: ${{ vars.DEPLOY_USER }}
           PORT: ${{ vars.DEPLOY_PORT || '22' }}
-          APP: ${{ vars.DEPLOY_PATH }}
+        run: |
+          rsync -az --delete --exclude cache -e "ssh -i $HOME/.ssh/deploy_key -p $PORT" \
+            "$APP_DIR/apps/cms/.next/" "$DUSER@$HOST:$APP_DIR/apps/cms/.next-new/"
+
+      - name: Activate on server
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          DUSER: ${{ vars.DEPLOY_USER }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          SHA: ${{ github.sha }}
           FULL: ${{ inputs.full && '1' || '' }}
         run: |
-          ssh -i ~/.ssh/deploy_key -p "$PORT" "$USER@$HOST" bash -s -- "$APP" "$FULL" <<'EOF'
+          ssh -i ~/.ssh/deploy_key -p "$PORT" "$DUSER@$HOST" bash -s -- "$APP_DIR" "$SHA" "$FULL" <<'EOF'
           set -euo pipefail
           cd "$1"
           before="$(git rev-parse HEAD)"
           git fetch --quiet origin main
-          git reset --hard origin/main
-          if [ -n "$2" ]; then bash deploy/deploy-cms.sh; else bash deploy/deploy-cms.sh "$before"; fi
+          git reset --hard "$2"
+          if [ -n "$3" ]; then bash deploy/deploy-cms.sh; else bash deploy/deploy-cms.sh "$before"; fi
           EOF

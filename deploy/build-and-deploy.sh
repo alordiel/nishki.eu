@@ -19,7 +19,8 @@ LINK="${CURRENT_LINK:-$WEB_ROOT/current}"
 echo "[deploy] building apps/web ($STAMP)"
 cd "$REPO_ROOT/apps/web"
 rm -rf dist
-pnpm build
+# Low priority + capped heap: this runs on a shared server next to other sites — fail the build, never freeze the box.
+nice -n 10 env NODE_OPTIONS="--max-old-space-size=${BUILD_MAX_HEAP_MB:-1536}" pnpm build
 
 mkdir -p "$WEB_ROOT/releases"
 rsync -a --delete dist/ "$WEB_ROOT/releases/$STAMP/"

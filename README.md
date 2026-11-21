@@ -50,7 +50,7 @@ Every page is a list of blocks; each Payload block (`apps/cms/src/blocks`) has o
 1. **DNS (Cloudflare):** `nishki.eu`, `www`, `redaktor`, `api` → VPS IP (or `nishki.eu`/`www` → Cloudflare Pages).
 2. **Plesk:** subdomains `redaktor` and `api` (done); Let's Encrypt certificates for all four names. Node 24.22+ via nvm/Plesk Node extension; `npm i -g pnpm pm2`.
 3. **Code:** clone to e.g. `/srv/nishki`, `pnpm install --frozen-lockfile`, create `apps/cms/.env` and `apps/web/.env` from `.env.example` (`openssl rand -hex 32` for `PAYLOAD_SECRET`).
-4. **CMS:** `pnpm build:cms && pm2 start deploy/ecosystem.config.cjs && pm2 save && pm2 startup`.
+4. **CMS:** don't build on a small server (the Next build needs 2–3 GB RAM). `.github/workflows/deploy-cms.yml` builds it on GitHub, uploads it and starts/reloads PM2 via `deploy/deploy-cms.sh`; run that workflow once by hand for the first deploy.
 5. **Nginx:** `deploy/nginx/redaktor-api.nishki.eu.conf` (+ `cloudflare-realip.conf` in `http {}` if proxied by Cloudflare); `deploy/nginx/nishki.eu.conf` when the static site is served from the VPS.
 6. **First login:** open `https://redaktor.nishki.eu` → create the first user (always becomes admin), or run the seed with `SEED_ADMIN_*`.
 7. **Build key:** Users → create user with role *Build*, tick *Enable API key*, copy the key into `apps/web/.env` as `CMS_API_KEY` (the seed does this for you).
