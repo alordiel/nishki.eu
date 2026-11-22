@@ -1,0 +1,25 @@
+# Plesk → nishki.eu → Apache & nginx Settings → "Additional nginx directives".
+# Also: "Proxy mode" OFF, "Serve static files directly by nginx" OFF (its regex locations would skip these headers).
+# Hosting Settings → Preferred domain: nishki.eu (301 from www).
+# Document root /var/www/vhosts/nishki.eu/nishki.eu is a symlink to the live release (deploy/build-and-deploy.sh).
+# 301s for old URLs (Phase 7): add exact-match blocks here — `location =` always wins over the regex blocks below.
+# location = /old-portfolio { return 301 /gallery/; }
+
+location ~ ^/_astro/ {
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+}
+
+location ~ ^/ {
+    try_files $uri $uri/ =404;
+    error_page 404 /404.html;
+    add_header Cache-Control "public, max-age=0, must-revalidate" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://api.nishki.eu; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'" always;
+}

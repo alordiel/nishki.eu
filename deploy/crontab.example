@@ -1,4 +1,5 @@
-# crontab -e  (as the user that runs the CMS)
-# Daily backup at 03:15, retention clean-up at 03:45
-15 3 * * * /srv/nishki/deploy/backup.sh >> /var/log/nishki/backup.log 2>&1
-45 3 * * * cd /srv/nishki && pnpm --filter @nishki/cms retention >> /var/log/nishki/retention.log 2>&1
+# crontab -e  as the Plesk subscription user (paths for /var/www/vhosts/nishki.eu; cron doesn't load ~/.bashrc).
+# PM2 back up after a reboot, daily backup at 03:15, GDPR retention clean-up at 03:45.
+@reboot PATH=/var/www/vhosts/nishki.eu/.npm-global/bin:/opt/plesk/node/24/bin:/usr/bin:/bin pm2 resurrect
+15 3 * * * BACKUP_DIR=/var/www/vhosts/nishki.eu/backups /var/www/vhosts/nishki.eu/nishki/deploy/backup.sh >> /var/www/vhosts/nishki.eu/cron-logs/backup.log 2>&1
+45 3 * * * cd /var/www/vhosts/nishki.eu/nishki/apps/cms && PATH=/var/www/vhosts/nishki.eu/.npm-global/bin:/opt/plesk/node/24/bin:/usr/bin:/bin NODE_ENV=production NODE_OPTIONS="--no-deprecation --max-old-space-size=1024" nice -n 10 pnpm exec payload run ./src/scripts/retention.ts >> /var/www/vhosts/nishki.eu/cron-logs/retention.log 2>&1

@@ -1,0 +1,23 @@
+# Plesk → redaktor.nishki.eu → Apache & nginx Settings → "Additional nginx directives".
+# Also: "Proxy mode" OFF, "Serve static files directly by nginx" OFF.
+# Needs the nishki_login zone from deploy/nginx/cloudflare-realip.conf in /etc/nginx/conf.d/.
+# client_max_body_size must stay inside a location: Plesk already sets it at server level (duplicate = error).
+location = /api/users/login {
+    limit_req zone=nishki_login burst=5 nodelay;
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location ~ ^/ {
+    client_max_body_size 50m;
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 120s;
+}

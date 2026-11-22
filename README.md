@@ -45,18 +45,37 @@ After changing collections/blocks/fields: `pnpm --filter @nishki/cms payload mig
 
 Every page is a list of blocks; each Payload block (`apps/cms/src/blocks`) has one Astro component (`apps/web/src/components/blocks`), wired in `BlockRenderer.astro`.
 
-## Server setup (Phase 1)
+## Server setup (Plesk)
 
-1. **DNS (Cloudflare):** `nishki.eu`, `www`, `redaktor`, `api` → VPS IP (or `nishki.eu`/`www` → Cloudflare Pages).
-2. **Plesk:** subdomains `redaktor` and `api` (done); Let's Encrypt certificates for all four names. Node 24.22+ via nvm/Plesk Node extension; `npm i -g pnpm pm2`.
-3. **Code:** clone to e.g. `/srv/nishki`, `pnpm install --frozen-lockfile`, create `apps/cms/.env` and `apps/web/.env` from `.env.example` (`openssl rand -hex 32` for `PAYLOAD_SECRET`).
-4. **CMS:** don't build on a small server (the Next build needs 2–3 GB RAM). `.github/workflows/deploy-cms.yml` builds it on GitHub, uploads it and starts/reloads PM2 via `deploy/deploy-cms.sh`; run that workflow once by hand for the first deploy.
-5. **Nginx:** `deploy/nginx/redaktor-api.nishki.eu.conf` (+ `cloudflare-realip.conf` in `http {}` if proxied by Cloudflare); `deploy/nginx/nishki.eu.conf` when the static site is served from the VPS.
-6. **First login:** open `https://redaktor.nishki.eu` → create the first user (always becomes admin), or run the seed with `SEED_ADMIN_*`.
-7. **Build key:** Users → create user with role *Build*, tick *Enable API key*, copy the key into `apps/web/.env` as `CMS_API_KEY` (the seed does this for you).
-8. **Cron:** `deploy/crontab.example` (daily backup + GDPR retention).
+One Plesk subscription holds `nishki.eu`, `api.nishki.eu` and `redaktor.nishki.eu`, so a single system user owns everything:
 
-Done when `https://redaktor.nishki.eu` shows the admin and `https://api.nishki.eu/health` returns `{"ok":true}`.
+```
+/var/www/vhosts/nishki.eu/
+  nishki/               git checkout (not public); the CMS runs from here under PM2
+    apps/cms/.env       CMS settings      ┐
+    apps/web/.env       site build settings│ gitignored — untouched by deploys
+    apps/cms/data/      SQLite database    │
+    apps/cms/media/     uploads           ┘
+  nishki-web/releases/  one folder per "Publish site" build (last 5 kept)
+  nishki.eu  →  nishki-web/releases/<latest>    document root of nishki.eu (symlink)
+  api.nishki.eu/, redaktor.nishki.eu/           unused; Nginx proxies them to the CMS
+  backups/, cron-logs/
+```
+
+1. **Cloudflare:** DNS for all names proxied; SSL **Full (strict)** with a Cloudflare **Origin Certificate** (`nishki.eu`, `*.nishki.eu`) assigned to **each** domain in Plesk (Hosting Settings → Security). A domain left on Plesk's default certificate gives Cloudflare error 526.
+2. **Shell:** subscription SSH access `/bin/bash` (not chrooted). Node from Plesk (`/opt/plesk/node/24/bin`, ≥ 24.22.1); `npm config set prefix ~/.npm-global && npm i -g pnpm pm2`; put `~/.npm-global/bin:/opt/plesk/node/24/bin` on `PATH` in `~/.bashrc` and have `~/.bash_profile` source it.
+3. **Code:** read-only GitHub deploy key on the server; `git clone … ~/nishki && pnpm install --frozen-lockfile`. Plesk's own Git deployment stays **off**.
+4. **Settings:** `apps/cms/.env` and `apps/web/.env` from `.env.example`. On the server set `REPO_ROOT`, `MEDIA_DIR`, `WEB_ROOT`, `CURRENT_LINK` (absolute paths) and `CMS_URL=http://127.0.0.1:3000` for the site build.
+5. **CMS build and start:** never build the CMS on the server (the Next build needs 2–3 GB RAM and froze the 4 GB box). `.github/workflows/deploy-cms.yml` builds it on GitHub at the server's path, uploads it, and `deploy/deploy-cms.sh` swaps it in, starts/reloads PM2 and rolls back if `/health` fails. The database tables come from `apps/cms/src/migrations`, applied on startup.
+6. **Nginx (root, once):** `cp deploy/nginx/cloudflare-realip.conf /etc/nginx/conf.d/nishki.conf && nginx -t && systemctl reload nginx` (real visitor IP behind Cloudflare + the `nishki_login` rate-limit zone).
+7. **Nginx (Plesk, per domain):** paste `deploy/plesk/<domain>.nginx` into *Apache & nginx Settings → Additional nginx directives*, with "Proxy mode" and "Serve static files directly by nginx" **off**. Don't enable Plesk's Node.js (Passenger) app: the CMS must be one long-running process (the publish lock and rate limiter live in memory). `nishki.eu`: Preferred domain = `nishki.eu`.
+8. **Content:** create the first user at `https://redaktor.nishki.eu` (becomes admin), then seed: `cd apps/cms && NODE_ENV=production NODE_OPTIONS="--no-deprecation --max-old-space-size=1024" nice -n 10 pnpm exec payload run ./src/scripts/seed.ts` — prints the build user's API key for `CMS_API_KEY`. Run CLI scripts with `NODE_ENV=production` on the server (dev mode would try to push the schema).
+9. **Cron:** `deploy/crontab.example` (PM2 resurrect on reboot, backup, GDPR retention).
+10. **Email:** Resend over SMTP (`smtp.resend.com:465`, user `resend`, password = API key); sender `no-reply@nishki.eu`.
+
+Check: `https://api.nishki.eu/health` → `{"ok":true}`, `https://redaktor.nishki.eu` → admin, **Publish site** → `https://nishki.eu`.
+
+`deploy/nginx/*.conf` are the equivalent full server blocks for a plain (non-Plesk) Nginx.
 
 ## Publishing (Phase 5)
 
@@ -71,8 +90,8 @@ Editors click **Publish site** in the admin header. Only one build runs at a tim
 
 ## Operations (Phase 6)
 
-- **Backups:** `deploy/backup.sh` (SQLite online backup + media, 30 days, `rclone` to `BACKUP_REMOTE`). **Test restore:** `deploy/restore.sh db-….tar.gz media-….tar.gz` restores into a temporary directory and checks integrity.
-- **Monitoring:** point an uptime monitor (UptimeRobot/Better Stack) at `https://nishki.eu/` and `https://api.nishki.eu/health`.
-- **Logs:** `pm2 logs nishki-cms` (`/var/log/nishki/`). Sentry can be added later.
+- **Backups:** `deploy/backup.sh` nightly (SQLite online backup + media → `BACKUP_DIR`, 30 days; off-site copy with `rclone` when `BACKUP_REMOTE` is set). **Test restore:** `deploy/restore.sh db-….tar.gz media-….tar.gz` restores into a temporary directory and checks integrity.
+- **Monitoring:** UptimeRobot on `https://nishki.eu/`; add `https://api.nishki.eu/health` (checks the CMS and its database).
+- **Logs:** `pm2 logs nishki-cms` (`~/.pm2/logs/`), cron jobs in `~/cron-logs/`. Sentry can be added later.
 - **Admin hardening:** account lock after 5 failed logins (15 min) + Nginx login rate limit; recommended: Cloudflare Access in front of `redaktor.nishki.eu` (gives 2FA/SSO without code changes).
 - **GDPR:** privacy notice + link under the form; submissions auto-deleted after `SUBMISSION_RETENTION_MONTHS` (cron); delete on request from the admin (Submissions → select → Delete; admins only). Export on request: copy the entry from the admin, or `GET /api/submissions?where[email][equals]=…` with an admin token (a CSV export button would need `@payloadcms/plugin-import-export`).

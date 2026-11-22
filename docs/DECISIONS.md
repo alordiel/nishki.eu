@@ -7,8 +7,8 @@ Things where the spec, the designs and the notes disagreed or were silent. Each 
 | # | Topic | What I did | Question |
 |---|---|---|---|
 | 1 | **Languages** (spec open question) | BG default at `/`, EN at `/en/` — the designs have a BG/EN switch. All text fields are localised; layout/photos are shared. EN copy is **my translation** of the design text. | Confirm BG+EN. Who reviews the English? |
-| 2 | **Static hosting** (open question) | Both work: `BUILD_MODE=local` (VPS, Nginx) and `BUILD_MODE=hook` (Cloudflare Pages via GitHub Actions). | Pick one. My recommendation: **VPS/local** — fewer moving parts, the image cache persists between builds (faster publishes), no GitHub token in the CMS. |
-| 3 | **Email provider / sender** | SMTP adapter; works with Resend/Postmark. Sender `noreply@nishki.eu`. | Which provider? SPF/DKIM/DMARC need adding in Cloudflare DNS. Auto-reply to the couple: on or off (now off)? |
+| 2 | **Static hosting** (open question) | Both work: `BUILD_MODE=local` (VPS, Nginx) and `BUILD_MODE=hook` (Cloudflare Pages via GitHub Actions). | **Decided 2026-11-22: VPS/local** (Plesk, `BUILD_MODE=local`). |
+| 3 | **Email provider / sender** | SMTP adapter; works with Resend/Postmark. Sender `noreply@nishki.eu`. | **Decided 2026-11-22: Resend** (SMTP), sender `no-reply@nishki.eu`, DNS records via Cloudflare. Still open: auto-reply to the couple on or off (now off)? |
 | 4 | **Admin accounts** | Roles `admin`, `editor` + a third role `build` (read-only API key for the build — needed so the build doesn't use a person's account). | Who gets which role? |
 | 5 | **Contact form: "origin"** | Spec: **multi**-select `Insta, Facebook, friends, web`. Design: **single**-select `Instagram, Facebook, Препоръка, Друго`. Implemented the **spec** (multi, spec values) with labels Instagram / Facebook / Препоръка от приятели / Интернет. | OK, or should it be single-select, and should "web" be "Друго" (Other)? |
 | 6 | **Contact form: phone** | Spec phase 2 says optional, phase 4 says required. Implemented **required** (phase 4 is the API contract). | Confirm. |
