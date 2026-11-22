@@ -90,7 +90,7 @@ Editors click **Publish site** in the admin header. Only one build runs at a tim
 
 ## Operations (Phase 6)
 
-- **Backups:** `deploy/backup.sh` nightly (SQLite online backup + media → `BACKUP_DIR`, 30 days; off-site copy with `rclone` when `BACKUP_REMOTE` is set). **Test restore:** `deploy/restore.sh db-….tar.gz media-….tar.gz` restores into a temporary directory and checks integrity.
+- **Backups:** `deploy/backup.sh` nightly. On the server: DB + media archives in `BACKUP_DIR`, 7 days. Off-site (`BACKUP_REMOTE=r2:nishki`, Cloudflare R2 via rclone, bucket-only key): `db/` archives 30 days (if < 100 MB), `media/` one mirror synced incrementally (deleted/replaced files kept 30 days in `media-removed/<date>/`); media sync pauses when < 2 GB of the 10 GB free tier is left. Problems and failures are emailed to `BACKUP_ALERT_EMAIL` via the Resend SMTP settings. All limits are env vars at the top of the script. Restore from R2: `rclone copy r2:nishki/media <dir>/media`, `rclone copy r2:nishki/db/db-<stamp>.tar.gz <dir>`. **Test restore:** `deploy/restore.sh db-….tar.gz media-….tar.gz` restores into a temporary directory and checks integrity.
 - **Monitoring:** UptimeRobot on `https://nishki.eu/`; add `https://api.nishki.eu/health` (checks the CMS and its database).
 - **Logs:** `pm2 logs nishki-cms` (`~/.pm2/logs/`), cron jobs in `~/cron-logs/`. Sentry can be added later.
 - **Admin hardening:** account lock after 5 failed logins (15 min) + Nginx login rate limit; recommended: Cloudflare Access in front of `redaktor.nishki.eu` (gives 2FA/SSO without code changes).
